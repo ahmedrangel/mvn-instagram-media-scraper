@@ -1,16 +1,15 @@
 package com.ahmedrangel.mvninstagrammediascraper;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+
 import java.util.Arrays;
 
 public class Scraper {
@@ -28,18 +27,15 @@ public class Scraper {
     } else {
       try {
         // Fetch data from instagram post
-        URL fetchUrl = new URL("https://www.instagram.com/p/" + idUrl + "?__a=1&__d=di");
-        HttpURLConnection connection = (HttpURLConnection) fetchUrl.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("cookie", _cookie);
-        connection.setRequestProperty("user-agent", _userAgent);
-        connection.setRequestProperty("x-ig-app-id", _xIgAppId);
-        connection.setRequestProperty("sec-fetch-site", "same-origin");
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        String response = in.lines().collect(Collectors.joining());
-        in.close();
+        String fetchUrl = "https://www.instagram.com/p/" + idUrl + "?__a=1&__d=di";
+        HttpResponse<String> response = Unirest.get(fetchUrl)
+        .header("cookie", _cookie)
+        .header("user-agent", _userAgent)
+        .header("x-ig-app-id", _xIgAppId)
+        .header("sec-fetch-site", "same-origin")
+        .asString();
         ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode node = objectMapper.readTree(response).get("items").get(0);
+        JsonNode node = objectMapper.readTree(response.getBody()).get("items").get(0);
 
         // Get items from instagram post
         String
@@ -76,7 +72,7 @@ public class Scraper {
         String[] carousel_images = null, carousel_videos = null;
 
         // Check if post is a carousel
-        if (product_type.equals("carousel_container")) {
+        if (node.get("product_type").asText().equals("carousel_container")) {
           JsonNode carousel_container = node.get("carousel_media");
           int size = carousel_container.size(); 
           carousel_images = new String[size];
